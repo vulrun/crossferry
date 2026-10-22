@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: CrossFerry CORS proxy (cors-anywhere style) behind a streaming Lambda Function URL
+
+# Deploy:  npm run build && npm run deploy:lambda     (from services/cors; needs AWS credentials)
+# The code is pre-bundled by scripts/build.mjs into dist/lambda, so no `sam build` step is needed.
+# Parameters map onto the CROSSFERRY_* settings documented in the README.
+
+Parameters:
+  RequireHeaders:
+    Type: String
+    Default: "origin,x-requested-with"
+  AllowedOrigins:
+    Type: String
+    Default: ""
+  BlockedOrigins:
+    Type: String
+    Default: ""
+  AllowedHosts:
+    Type: String
+    Default: ""
+  AllowedPorts:
+    Type: String
+    Default: "80,443"
+  BlockPrivateIps:
+    Type: String
+    Default: "true"
+  RateLimit:
+    Type: String
+    Default: ""
+  PublicBaseUrl:
+    Type: String
+    Default: ""
+    Description: Set when a custom domain (CloudFront) fronts the Function URL
+
+Resources:
+  CorsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../dist/lambda
+      Handler: lambda.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      MemorySize: 512
+      Timeout: 60
+      Environment:
+        Variables:
+          CROSSFERRY_REQUIRE_HEADERS: !Ref RequireHeaders
+          CROSSFERRY_ALLOWED_ORIGINS: !Ref AllowedOrigins
+          CROSSFERRY_BLOCKED_ORIGINS: !Ref BlockedOrigins
+          CROSSFERRY_ALLOWED_HOSTS: !Ref AllowedHosts
+          CROSSFERRY_ALLOWED_PORTS: !Ref AllowedPorts
+          CROSSFERRY_BLOCK_PRIVATE_IPS: !Ref BlockPrivateIps
+          CROSSFERRY_RATE_LIMIT: !Ref RateLimit
+          CROSSFERRY_PUBLIC_BASE_URL: !Ref PublicBaseUrl
+          CROSSFERRY_ENABLE_ACCESS_LOGS: "false"
+          CROSSFERRY_ENABLE_ERROR_LOGS: "true"
+      FunctionUrlConfig:
+        AuthType: NONE
+        # streams large bodies instead of buffering them into the 6 MB payload limit
+        InvokeMode: RESPONSE_STREAM
+
+Outputs:
+  FunctionUrl:
+    Description: Public URL of the CrossFerry CORS proxy
+    Value: !GetAtt CorsFunctionUrl.FunctionUrl

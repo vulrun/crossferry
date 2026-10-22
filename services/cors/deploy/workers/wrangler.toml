@@ -1,0 +1,35 @@
+# CrossFerry CORS proxy on Cloudflare Workers.
+#   npm run dev:workers      → http://localhost:8787
+#   npm run deploy:workers   (needs `npx wrangler login` or CLOUDFLARE_API_TOKEN)
+name = "crossferry-cors"
+main = "../../src/adapters/workers.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Attach a custom domain in the dashboard or with:
+# routes = [{ pattern = "cors.example.com", custom_domain = true }]
+
+[observability]
+enabled = true
+
+# Plain settings, same CROSSFERRY_* names as everywhere else. Secrets (none are needed) would go
+# through `wrangler secret put`.
+[vars]
+CROSSFERRY_REQUIRE_HEADERS = "origin,x-requested-with"
+CROSSFERRY_ALLOWED_ORIGINS = ""
+CROSSFERRY_BLOCKED_ORIGINS = ""
+CROSSFERRY_ALLOWED_HOSTS = ""
+CROSSFERRY_ALLOWED_PORTS = "80,443"
+CROSSFERRY_BLOCK_PRIVATE_IPS = "true"
+# per-isolate only on Workers; see README
+CROSSFERRY_RATE_LIMIT = ""
+CROSSFERRY_RATE_LIMIT_EXEMPT = ""
+CROSSFERRY_MAX_REDIRECTS = "5"
+CROSSFERRY_UPSTREAM_TIMEOUT_MS = "30000"
+CROSSFERRY_CORS_MAX_AGE = "600"
+CROSSFERRY_REMOVE_HEADERS = "cookie,cookie2"
+CROSSFERRY_SET_HEADERS = ""
+CROSSFERRY_REDIRECT_SAME_ORIGIN = "false"
+CROSSFERRY_PUBLIC_BASE_URL = ""
+CROSSFERRY_ENABLE_ACCESS_LOGS = "false"
+CROSSFERRY_ENABLE_ERROR_LOGS = "true"

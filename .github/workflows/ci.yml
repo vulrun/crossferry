@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    # version tags publish semver-tagged images: v1.2.3 (crossferry), forward-v1.2.3, cors-v1.2.3
+    tags: ["v*", "forward-v*", "cors-v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests, bundles, Workers dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # CLI + shared + forward proxy + CORS proxy
+      - run: npm test
+      # Lambda and Cloud Functions bundles
+      - run: npm run build -w @crossferry/cors
+      # proves the Workers bundle builds; no Cloudflare credentials needed
+      - run: npx wrangler deploy --dry-run --outdir dist/workers -c deploy/workers/wrangler.toml
+        working-directory: services/cors
+
+  # Builds the three images on every run; pushes them to ghcr.io on pushes to main and on tags.
+  # Pull requests only build (fork PRs have a read-only token, so no login or cache export there).
+  images:
+    name: Image ${{ matrix.image }}
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: crossferry
+            dockerfile: Dockerfile
+            tag-prefix: ""
+            description: CrossFerry — forward HTTP/HTTPS proxy and CORS proxy, runnable together or separately
+          - image: crossferry-forward
+            dockerfile: services/proxy/deploy/docker/Dockerfile
+            tag-prefix: forward-
+            description: CrossFerry forward HTTP/HTTPS proxy with CONNECT tunnels, Basic Auth and SSRF guard
+          - image: crossferry-cors
+            dockerfile: services/cors/deploy/docker/Dockerfile
+            tag-prefix: cors-
+            description: CrossFerry CORS proxy (cors-anywhere style)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      # ghcr.io image names must be lowercase; the GitHub owner may not be
+      - id: owner
+        run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.owner.outputs.name }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+            type=match,pattern=^${{ matrix.tag-prefix }}v(\d+\.\d+\.\d+)$,group=1
+            type=match,pattern=^${{ matrix.tag-prefix }}v(\d+\.\d+)\.\d+$,group=1
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image }}
+            org.opencontainers.image.description=${{ matrix.description }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          # arm64 is emulated and slow, so PRs build amd64 only
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=gha,mode=max,scope={0}', matrix.image) || '' }}

@@ -1,0 +1,29 @@
+{
+  "name": "@crossferry/proxy",
+  "version": "1.0.0",
+  "description": "CrossFerry forward HTTP/HTTPS proxy: CONNECT tunnels, Basic Auth, allowlists, SSRF guard. Node only.",
+  "type": "commonjs",
+  "private": true,
+  "license": "MIT",
+  "main": "src/server.js",
+  "exports": {
+    ".": "./src/server.js"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "@crossferry/shared": "1.0.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env index.js",
+    "dev": "node --watch --env-file-if-exists=.env index.js",
+    "test": "node --test --test-timeout=10000 test/*.test.js",
+    "pm2:start": "pm2 start index.js --name=crossferry-forward --node-args=\"--env-file-if-exists=.env\"",
+    "pm2:reload": "pm2 reload crossferry-forward",
+    "pm2:logs": "pm2 log crossferry-forward",
+    "docker:up": "docker compose -f deploy/docker/docker-compose.yml up -d --build",
+    "docker:down": "docker compose -f deploy/docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f deploy/docker/docker-compose.yml logs -f"
+  }
+}

@@ -1,0 +1,85 @@
+# Deploys the CrossFerry CORS proxy (services/cors). Runs on a `cors-v*` tag (all targets) or by hand
+# with a chosen target. Required secrets/variables per target are listed in services/cors/README.md.
+name: Deploy CrossFerry CORS proxy
+
+on:
+  push:
+    tags: ["cors-v*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Where to deploy
+        type: choice
+        default: workers
+        options: [workers, lambda, gcf, all]
+
+env:
+  TARGET: ${{ github.event_name == 'push' && 'all' || inputs.target }}
+
+jobs:
+  workers:
+    if: ${{ github.event_name == 'push' || inputs.target == 'workers' || inputs.target == 'all' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -w @crossferry/cors
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: services/cors
+          command: deploy -c deploy/workers/wrangler.toml
+
+  lambda:
+    if: ${{ github.event_name == 'push' || inputs.target == 'lambda' || inputs.target == 'all' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -w @crossferry/cors
+      - run: npm run build -w @crossferry/cors
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/setup-sam@v2
+      - run: sam deploy -t deploy/lambda/template.yaml --config-file deploy/lambda/samconfig.toml --region ${{ vars.AWS_REGION }} --no-fail-on-empty-changeset
+        working-directory: services/cors
+
+  gcf:
+    if: ${{ github.event_name == 'push' || inputs.target == 'gcf' || inputs.target == 'all' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -w @crossferry/cors
+      - run: npm run build -w @crossferry/cors
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: bash deploy/gcf/deploy.sh
+        working-directory: services/cors
+        env:
+          GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+          GCP_REGION: ${{ vars.GCP_REGION }}

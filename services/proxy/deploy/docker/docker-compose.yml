@@ -1,0 +1,20 @@
+# CrossFerry forward proxy alone. From services/proxy: npm run docker:up
+# (for both services in one container, use the docker-compose.yml at the repository root)
+services:
+  forward:
+    build:
+      context: ../../../..
+      dockerfile: services/proxy/deploy/docker/Dockerfile
+    # prebuilt: CROSSFERRY_FORWARD_IMAGE=ghcr.io/<owner>/crossferry-forward:latest ... up -d --no-build
+    image: ${CROSSFERRY_FORWARD_IMAGE:-crossferry-forward}
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      # must listen on all interfaces inside the container; restrict exposure with the port mapping below
+      CROSSFERRY_HOST: "0.0.0.0"
+      CROSSFERRY_PORT: "3128"
+    ports:
+      - "3128:3128"
+    restart: unless-stopped
+    init: true

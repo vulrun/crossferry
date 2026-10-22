@@ -1,0 +1,10 @@
+# SAM CLI defaults for `sam deploy -t deploy/lambda/template.yaml --config-file deploy/lambda/samconfig.toml`
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "crossferry-cors"
+resolve_s3 = true
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+# region = "us-east-1"
+# parameter_overrides = "AllowedOrigins=https://app.example.com RateLimit=\"50 3\""

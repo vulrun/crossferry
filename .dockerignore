@@ -1,0 +1,17 @@
+.git
+.gitignore
+node_modules
+npm-debug.log*
+*.log
+.env
+.env.*
+!.env.example
+**/.env
+**/node_modules
+**/dist
+**/.wrangler
+**/.aws-sam
+**/test
+**/docs
+**/*.md
+docker-compose.yml

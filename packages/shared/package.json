@@ -1,0 +1,14 @@
+{
+  "name": "@crossferry/shared",
+  "version": "1.0.0",
+  "description": "Runtime-agnostic helpers shared by the CrossFerry services (no Node-only imports)",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test --test-timeout=10000 test/*.test.js"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "crossferry",
+  "version": "1.0.0",
+  "description": "CrossFerry - a forward HTTP/HTTPS proxy and CORS proxy, runnable together or separately",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "crossferry": "./bin/crossferry.js"
+  },
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env bin/crossferry.js all",
+    "start:forward": "node --env-file-if-exists=.env bin/crossferry.js forward",
+    "start:cors": "node --env-file-if-exists=.env bin/crossferry.js cors",
+    "dev": "node --watch --env-file-if-exists=.env bin/crossferry.js all",
+    "test": "node --test --test-timeout=15000 test/*.test.js && npm test --workspaces --if-present",
+    "test:all": "npm test",
+    "pm2:start": "pm2 start bin/crossferry.js --name=crossferry --node-args=\"--env-file-if-exists=.env\" -- all",
+    "pm2:reload": "pm2 reload crossferry",
+    "pm2:logs": "pm2 log crossferry",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  }
+}

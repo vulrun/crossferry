@@ -1,0 +1,22 @@
+# CrossFerry, both services in one container. From the repository root: docker compose up -d --build
+# To run the prebuilt image instead of building:
+#   CROSSFERRY_IMAGE=ghcr.io/<owner>/crossferry:latest docker compose up -d --no-build
+services:
+  crossferry:
+    build: .
+    image: ${CROSSFERRY_IMAGE:-crossferry}
+    # "forward" or "cors" runs one service only
+    command: ["all"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # listen on all interfaces inside the container; restrict exposure with the port mappings below
+      CROSSFERRY_HOST: "0.0.0.0"
+      CROSSFERRY_PORT: "3128"
+      CROSSFERRY_CORS_PORT: "8080"
+    ports:
+      - "3128:3128"
+      - "8080:8080"
+    restart: unless-stopped
+    init: true

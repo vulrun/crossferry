@@ -1,0 +1,38 @@
+{
+  "name": "@crossferry/cors",
+  "version": "1.0.0",
+  "description": "CrossFerry CORS proxy (cors-anywhere style): GET /https://target/path returns the target with CORS headers",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "exports": {
+    ".": "./src/app.js",
+    "./node": "./src/adapters/node.js"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/adapters/node.js",
+    "dev": "node --watch --env-file-if-exists=.env src/adapters/node.js",
+    "test": "node --test --test-timeout=15000 test/*.test.js",
+    "build": "node scripts/build.mjs",
+    "dev:workers": "wrangler dev -c deploy/workers/wrangler.toml",
+    "deploy:workers": "wrangler deploy -c deploy/workers/wrangler.toml",
+    "dev:gcf": "npm run build && functions-framework --target=cors --source=dist/gcf",
+    "deploy:gcf": "npm run build && bash deploy/gcf/deploy.sh",
+    "deploy:lambda": "npm run build && sam deploy -t deploy/lambda/template.yaml --no-confirm-changeset --resolve-s3"
+  },
+  "dependencies": {
+    "@crossferry/shared": "1.0.0",
+    "@hono/aws-lambda": "^1.0.1",
+    "@hono/node-server": "^2.1.5",
+    "hono": "^4.13.13",
+    "undici": "^7.0.0"
+  },
+  "devDependencies": {
+    "@google-cloud/functions-framework": "^5.0.5",
+    "esbuild": "^0.28.2",
+    "wrangler": "^4.151.3"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}
